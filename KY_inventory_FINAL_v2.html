@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="pageTabTitle">재고·물류관리 시스템</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ══════════════════════════════════════════════════
+       ① 기본 CSS 변수 — 색상 테마 변경 시 여기만 수정
+       ══════════════════════════════════════════════════ */
+    :root {
+      --navy:#0f2747; --navy2:#16355f; --navy3:#1e467a;
+      --blue:#2563eb; --blue-soft:#eaf2ff;
+      --green:#16a34a; --amber:#d97706; --red:#dc2626;
+      --bg:#f3f6fb; --card:#ffffff; --line:#e5ebf3;
+      --text:#172033; --muted:#667085;
+      --shadow:0 10px 30px rgba(15,39,71,.08);
+      --radius:18px; --side:258px; --top:72px;
+    }
+    /* 테마: 그린 */
+    body.theme-green{--blue:#16a34a;--blue-soft:#dcfce7;--navy:#0a2e1a;--navy2:#104d2a;--navy3:#166534}
+    /* 테마: 다크 */
+    body.theme-dark{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#f1f5f9;--muted:#94a3b8;--shadow:0 10px 30px rgba(0,0,0,.4)}
+    body.theme-dark table th{background:#263348}
+    body.theme-dark input,body.theme-dark select{background:#263348;border-color:#334155;color:#f1f5f9}
+    body.theme-dark .topbar{background:#1e293b;border-color:#334155}
+    body.theme-dark .company-chip{background:#263348;color:#93c5fd}
+    body.theme-dark .autocomplete-list{background:#1e293b;border-color:#334155}
+    body.theme-dark .ac-item:hover{background:#263348}
+    body.theme-dark .stock-preview{background:#1e3a5f;border-color:#2563eb}
+    body.theme-dark .modal-box{background:#1e293b;color:#f1f5f9}
+    body.theme-dark .login-box{background:rgba(255,255,255,.06)}
+
+    *{box-sizing:border-box} html,body{margin:0;padding:0;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text)} body{min-height:100vh}
+
+    /* ══ 레이아웃 ══ */
+    .app{display:flex;min-height:100vh}
+    .sidebar{width:var(--side);background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 58%,#102847 100%);color:#fff;position:fixed;left:0;top:0;bottom:0;overflow:auto;padding:18px 14px;box-shadow:12px 0 30px rgba(9,20,38,.18);z-index:20}
+    .brand{display:flex;gap:12px;align-items:flex-start;padding:12px 12px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px}
+    .logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#fff,#dce8ff);color:var(--navy);display:grid;place-items:center;font-weight:800;font-size:17px;box-shadow:0 6px 16px rgba(0,0,0,.18);flex-shrink:0}
+    .brand h1{font-size:20px;line-height:1.2;margin:0 0 4px 0;font-weight:800;letter-spacing:-.02em}
+    .brand p{font-size:11px;line-height:1.45;margin:0;color:rgba(255,255,255,.68)}
+    .nav-title{font-size:11px;color:rgba(255,255,255,.42);margin:18px 10px 8px;font-weight:800;letter-spacing:.05em}
+    .nav button{width:100%;border:0;background:transparent;color:rgba(255,255,255,.84);text-align:left;padding:12px 12px;border-radius:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;transition:.18s}
+    .nav button .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22);flex-shrink:0}
+    .nav button.active,.nav button:hover{background:rgba(255,255,255,.12);color:#fff;transform:translateX(2px)}
+    .nav button.active .dot{background:#8fb6ff;box-shadow:0 0 0 4px rgba(143,182,255,.15)}
+    .nav-badge{margin-left:auto;background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;min-width:18px;text-align:center;display:none}
+    .nav-badge.on{display:inline-block}
+
+    .main{margin-left:var(--side);width:calc(100% - var(--side));min-height:100vh}
+    .topbar{height:var(--top);background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10;box-shadow:0 4px 18px rgba(15,39,71,.04)}
+    .top-left{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0}
+    .breadcrumb{font-size:12px;color:#7d8aa0;font-weight:700;letter-spacing:.01em}
+    .page-title{font-size:24px;font-weight:800;line-height:1.15;letter-spacing:-.02em;margin:0;color:var(--text)}
+    .page-sub{font-size:12px;color:var(--muted);font-weight:500;line-height:1.4}
+    .top-right{display:flex;align-items:flex-end;gap:8px;flex-direction:column;text-align:right;flex-shrink:0}
+    .company-chip{background:var(--blue-soft);color:#1849a9;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800}
+    .today{font-size:12px;color:var(--muted);font-weight:700}
+    .theme-row{display:flex;gap:7px;align-items:center}
+    .theme-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.18s}
+    .theme-dot:hover,.theme-dot.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.2)}
+    .theme-dot.t-blue{background:#2563eb}.theme-dot.t-green{background:#16a34a}.theme-dot.t-dark{background:#334155}
+
+    .wrap{padding:24px}
+    .page{display:none}.page.active{display:block}
+    .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+    .grid-main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(340px,.9fr);gap:16px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .stack{display:flex;flex-direction:column;gap:16px}
+
+    /* ══ 카드 ══ */
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card-hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .card-hd h3{margin:0;font-size:16px;line-height:1.2}
+    .card-bd{padding:18px}
+
+    /* ══ KPI 카드 ══ */
+    .kpi{padding:18px 18px 16px;border-radius:20px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);position:relative;overflow:hidden}
+    .kpi:before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--blue)}
+    .kpi.green:before{background:var(--green)}.kpi.red:before{background:var(--red)}.kpi.amber:before{background:var(--amber)}.kpi.navy:before{background:var(--navy3)}
+    .kpi .kpi-icon{font-size:20px;display:block;margin-bottom:4px}
+    .kpi .label{font-size:12px;color:var(--muted);font-weight:800}
+    .kpi .value{font-size:34px;font-weight:800;margin:8px 0 4px;line-height:1}
+    .kpi .meta{font-size:12px;color:var(--muted);font-weight:600}
+    body.theme-dark .kpi{background:var(--card)}
+
+    /* ══ 테이블 ══ */
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left;vertical-align:middle}
+    th{background:#f8fbff;font-size:12px;color:var(--muted);font-weight:800}
+    .right{text-align:right}.center{text-align:center}
+    tr.row-low td{background:#fff7ed}
+    tr.row-danger td{background:#fff1f2}
+    body.theme-dark tr.row-low td{background:#422006}
+    body.theme-dark tr.row-danger td{background:#450a0a}
+
+    /* ══ 배지 ══ */
+    .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800}
+    .in{background:#dbeafe;color:#1d4ed8}.out{background:#fee2e2;color:#b91c1c}
+    .low{background:#fff7ed;color:#c2410c}.ok{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#b45309}
+
+    /* ══ 미니 리스트 ══ */
+    .mini{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px}
+    .mini:last-child{border-bottom:0}
+    .muted{color:var(--muted)}.small{font-size:12px}
+
+    /* ══ 바 ══ */
+    .bar{height:10px;background:#edf2f7;border-radius:999px;overflow:hidden}
+    .bar>div{height:100%;transition:.25s}
+
+    /* ══ 폼 ══ */
+    input,select{width:100%;padding:12px 13px;border:1px solid #d7deea;border-radius:13px;background:#fff;font:inherit;outline:none}
+    input:focus,select:focus{border-color:#9bb7f3;box-shadow:0 0 0 4px rgba(37,99,235,.08)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:16px}
+    .toolbar>div{min-width:140px;flex:1}.toolbar .fit{flex:0 0 auto}
+    .btns{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{border:0;border-radius:13px;padding:11px 16px;font-weight:800;cursor:pointer;transition:.18s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--blue);color:#fff}
+    .btn.secondary{background:#eef4ff;color:#1246a8}
+    .btn.danger{background:#fee2e2;color:#b91c1c}
+    .btn.dark{background:var(--navy);color:#fff}
+    .btn.csv{background:#f0fdf4;color:#166534}
+    body.theme-dark .btn.secondary{background:#263348;color:#93c5fd}
+    body.theme-dark .btn.csv{background:#14532d;color:#86efac}
+
+    /* ══ 기타 공통 ══ */
+    .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .empty{padding:28px;text-align:center;color:var(--muted)}
+    .toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.22s;z-index:9999}
+    .toast.show{opacity:1;transform:none}
+    .setting-box{display:grid;gap:12px}
+    .chip-row{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:800}
+    body.theme-dark .chip{background:#263348;color:#94a3b8}
+
+    /* ══ 로그인 화면 ══ */
+    #loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0a1628 0%,#0f2747 50%,#0a1628 100%);display:flex;align-items:center;justify-content:center}
+    .login-box{background:rgba(255,255,255,.06);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:48px 40px;width:380px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.5)}
+    .login-logo{width:72px;height:72px;background:linear-gradient(135deg,#fff,#dce8ff);color:var(--navy);border-radius:20px;display:grid;place-items:center;font-weight:800;font-size:26px;margin:0 auto 18px;box-shadow:0 8px 28px rgba(37,99,235,.3)}
+    .login-box h2{color:#f8fafc;font-size:22px;font-weight:800;margin:0 0 6px}
+    .login-sub{color:rgba(255,255,255,.55);font-size:13px;margin-bottom:32px}
+    .login-field{margin-bottom:16px;text-align:left}
+    .login-field label{color:rgba(255,255,255,.6);font-size:12px;font-weight:700;display:block;margin-bottom:7px}
+    .login-field input{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:13px;color:#f8fafc;font-size:14px;padding:13px 16px;transition:.18s}
+    .login-field input:focus{border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.18);background:rgba(255,255,255,.13)}
+    .login-field input::placeholder{color:rgba(255,255,255,.35)}
+    .login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;transition:.2s;box-shadow:0 4px 16px rgba(37,99,235,.35)}
+    .login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,99,235,.45)}
+    .login-err{color:#fca5a5;font-size:13px;margin-top:10px;display:none}
+    .login-hint{margin-top:20px;font-size:12px;color:rgba(255,255,255,.3)}
+
+    /* ══ 자동완성 ══ */
+    .autocomplete-wrap{position:relative}
+    .autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #93c5fd;border-radius:0 0 13px 13px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;display:none}
+    .autocomplete-list.open{display:block}
+    .ac-item{padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);transition:.12s}
+    .ac-item:hover{background:#eff6ff}.ac-item:last-child{border-bottom:0}
+    .ac-item strong{color:var(--navy)}.ac-item span{color:var(--muted);font-size:12px;margin-left:8px}
+
+    /* ══ 현재고 미리보기 ══ */
+    .stock-preview{background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:13px;padding:12px 16px;display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+    .stock-preview.warn{background:#fff7ed;border-color:#fed7aa}
+    .stock-preview.danger{background:#fff1f2;border-color:#fecaca;animation:shake .3s}
+    @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+    .sp-label{font-size:12px;color:var(--muted);font-weight:700}
+    .sp-value{font-size:22px;font-weight:800;color:#0f172a}
+    .sp-unit{font-size:13px;color:var(--muted)}
+    .sp-warn{font-size:12px;font-weight:800;color:#dc2626;display:none}
+    body.theme-dark .sp-value{color:#f1f5f9}
+
+    /* ══ 마이너스 방지 모달 ══ */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:none;align-items:center;justify-content:center}
+    .modal-backdrop.open{display:flex}
+    .modal-box{background:#fff;border-radius:20px;padding:32px;max-width:420px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:mIn .22s ease}
+    @keyframes mIn{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+    .modal-box h3{margin:0 0 10px;font-size:18px;color:#dc2626}
+    .modal-box p{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 20px}
+    .modal-box .btns{justify-content:flex-end}
+
+    /* ══ 통계 섹션 ══ */
+    .stats-table-wrap{margin-top:16px}
+
+    /* ══ 반응형 ══ */
+    @media (max-width:1400px){.grid-5{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:1200px){.grid-main,.grid-2,.settings-grid,.row,.row-3{grid-template-columns:1fr}.grid-5{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:860px){.app{display:block}.sidebar{position:static;width:100%;height:auto}.main{margin-left:0;width:100%}.topbar{position:static;height:auto;padding:18px}.wrap{padding:16px}.grid-5{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<!-- ══ 로그인 화면 ══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo" id="loginLogo">KY</div>
+    <h2 id="loginTitle">KY 스마트공장</h2>
+    <div class="login-sub">재고·물류관리 시스템</div>
+    <div class="login-field">
+      <label>아이디</label>
+      <input type="text" id="loginId" placeholder="아이디 입력" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>비밀번호</label>
+      <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn">로그인</button>
+    <div class="login-err" id="loginErr">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+    <div class="login-hint" id="loginHint"></div>
+  </div>
+</div>
+
+<!-- ══ 마이너스 재고 방지 경고 모달 ══ -->
+<div class="modal-backdrop" id="alertModal">
+  <div class="modal-box">
+    <h3 id="alertTitle">⚠️ 출고 수량 초과</h3>
+    <p id="alertMsg"></p>
+    <div class="btns"><button class="btn primary" onclick="closeAlert()">확인</button></div>
+  </div>
+</div>
+
+<!-- ══ 메인 앱 (로그인 전까지 hidden) ══ -->
+<div class="app" id="appWrap" style="display:none">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" id="brandLogo">KY</div>
+      <div>
+        <h1 id="companyNameSide">KY 재고관리 시스템</h1>
+        <p>스마트공장 기초단계 납품형 템플릿<br>제조업 재고·물류관리 표준 버전</p>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-title">메인</div>
+      <button class="active" data-page="dashboard"><span class="dot"></span>대시보드</button>
+      <div class="nav-title">운영</div>
+      <button data-page="register"><span class="dot"></span>입출고 등록</button>
+      <button data-page="history"><span class="dot"></span>입출고 이력</button>
+      <button data-page="stock"><span class="dot"></span>재고 조회</button>
+      <button data-page="shortage"><span class="dot"></span>부족 재고 <span class="nav-badge" id="shortBadge">0</span></button>
+      <button data-page="master"><span class="dot"></span>품목 마스터</button>
+      <div class="nav-title">분석</div>
+      <button data-page="stats"><span class="dot"></span>통계 / 리포트</button>
+      <div class="nav-title">설정</div>
+      <button data-page="settings"><span class="dot"></span>시스템 설정</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="top-left">
+        <div class="breadcrumb" id="breadcrumbText">스마트공장 > 제조업 재고·물류관리</div>
+        <h2 class="page-title" id="pageTitle">대시보드</h2>
+        <div class="page-sub" id="pageSub">제조업 스마트공장형 재고·물류 운영 현황</div>
+      </div>
+      <div class="top-right">
+        <div class="theme-row">
+          <div class="theme-dot t-blue active" title="블루 테마" onclick="setTheme('blue',this)"></div>
+          <div class="theme-dot t-green" title="그린 테마" onclick="setTheme('green',this)"></div>
+          <div class="theme-dot t-dark" title="다크 테마" onclick="setTheme('dark',this)"></div>
+        </div>
+        <div class="company-chip" id="companyChip">KY 재고관리 시스템</div>
+        <div class="today" id="todayText"></div>
+      </div>
+    </div>
+
+    <div class="wrap">
+
+      <!-- ══ 대시보드 ══ -->
+      <section class="page active" id="page-dashboard">
+        <div class="grid-5">
+          <div class="kpi navy">
+            <span class="kpi-icon">📦</span>
+            <div class="label">총 품목 수</div><div class="value" id="kpiItems">0</div><div class="meta">품목마스터 기준</div>
+          </div>
+          <div class="kpi green">
+            <span class="kpi-icon">✅</span>
+            <div class="label">총 재고 수량</div><div class="value" id="kpiTotalStock">0</div><div class="meta">전체 창고 합계</div>
+          </div>
+          <div class="kpi red">
+            <span class="kpi-icon">⚠️</span>
+            <div class="label">부족 재고 품목</div><div class="value" id="kpiLow">0</div><div class="meta">안전재고 이하</div>
+          </div>
+          <div class="kpi">
+            <span class="kpi-icon">📥</span>
+            <div class="label">오늘 입고 건수</div><div class="value" id="kpiInToday">0</div><div class="meta">당일 처리 기준</div>
+          </div>
+          <div class="kpi amber">
+            <span class="kpi-icon">📤</span>
+            <div class="label">오늘 출고 건수</div><div class="value" id="kpiOutToday">0</div><div class="meta">당일 처리 기준</div>
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="grid-main">
+          <div class="stack">
+            <div class="card">
+              <div class="card-hd"><h3>최근 입출고 내역</h3><button class="btn secondary" onclick="goPage('history')">전체 보기</button></div>
+              <div class="card-bd" style="padding:0 18px 10px">
+                <table><thead><tr><th>일시</th><th>품목코드</th><th>품목명</th><th>구분</th><th class="right">수량</th><th>창고</th><th>담당자</th></tr></thead>
+                <tbody id="recentTbody"></tbody></table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><h3>월별 입출고 통계</h3></div>
+              <div class="card-bd"><canvas id="monthChart" height="120"></canvas></div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card">
+              <div class="card-hd"><h3>부족 재고 알림</h3><button class="btn secondary" onclick="goPage('shortage')">상세</button></div>
+              <div class="card-bd" id="lowList"></div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><h3>창고별 재고 현황</h3></div>
+              <div class="card-bd" id="warehouseBarsWrap">
+                <!-- CONFIG.WAREHOUSES 기반으로 JS에서 동적 생성 -->
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><h3>오늘 출고 TOP 5</h3></div>
+              <div class="card-bd" id="topOutList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 입출고 등록 ══ -->
+      <section class="page" id="page-register">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd"><h3>입출고 등록</h3></div>
+            <div class="card-bd">
+              <div class="row">
+                <div>
+                  <label class="small muted">구분</label>
+                  <select id="txType" onchange="onTxTypeChange()">
+                    <option value="입고">입고</option>
+                    <option value="출고">출고</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="small muted">일시</label>
+                  <input id="txDate" type="datetime-local">
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <div class="row">
+                <div>
+                  <label class="small muted">품목코드</label>
+                  <input id="txCode" placeholder="코드 직접 입력">
+                </div>
+                <div class="autocomplete-wrap">
+                  <label class="small muted">품목명 <span style="color:var(--blue);font-size:11px">↓ 자동완성</span></label>
+                  <input id="txName" placeholder="품목명 입력 (자동완성)" autocomplete="off" oninput="onNameInput(this.value)">
+                  <div class="autocomplete-list" id="acList"></div>
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <div class="row-3">
+                <div>
+                  <label class="small muted">수량</label>
+                  <input id="txQty" type="number" min="1" value="1" oninput="onQtyInput()">
+                </div>
+                <div>
+                  <label class="small muted">담당자</label>
+                  <input id="txManager">
+                </div>
+                <div>
+                  <label class="small muted">창고</label>
+                  <select id="txWarehouse" onchange="onQtyInput()"></select>
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <div class="row">
+                <div><label class="small muted">현장명</label><input id="txSite"></div>
+                <div><label class="small muted">비고</label><input id="txNote"></div>
+              </div>
+              <!-- 현재고 미리보기 -->
+              <div class="stock-preview" id="stockPreview">
+                <div>
+                  <div class="sp-label">선택 품목 현재고 (해당 창고)</div>
+                  <div>
+                    <span class="sp-value" id="spValue">0</span>
+                    <span class="sp-unit" id="spUnit"></span>
+                    <span class="sp-warn" id="spWarn">⚠ 출고 수량 초과 — 저장 불가</span>
+                  </div>
+                </div>
+              </div>
+              <div style="height:16px"></div>
+              <div class="btns">
+                <button class="btn primary" onclick="saveTransaction()">💾 저장</button>
+                <button class="btn secondary" onclick="fillNow()">현재시간</button>
+                <button class="btn danger" onclick="resetTransactionForm()">초기화</button>
+              </div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="card">
+              <div class="card-hd"><h3>오늘 등록 현황</h3></div>
+              <div class="card-bd">
+                <div class="row">
+                  <div class="center"><div class="muted small">입고</div><div style="font-size:28px;font-weight:800" id="regInCnt">0</div></div>
+                  <div class="center"><div class="muted small">출고</div><div style="font-size:28px;font-weight:800" id="regOutCnt">0</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><h3>최근 등록</h3></div>
+              <div class="card-bd" id="regRecent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 입출고 이력 ══ -->
+      <section class="page" id="page-history">
+        <div class="toolbar">
+          <div><label class="small muted">검색</label><input id="historyKeyword" placeholder="품목코드·품목명·담당자"></div>
+          <div><label class="small muted">구분</label><select id="historyType"><option value="">전체</option><option>입고</option><option>출고</option></select></div>
+          <div><label class="small muted">창고</label><select id="historyWh"><option value="">전체</option></select></div>
+          <div><label class="small muted">시작일</label><input type="date" id="historyDateFrom"></div>
+          <div><label class="small muted">종료일</label><input type="date" id="historyDateTo"></div>
+          <div class="fit btns">
+            <button class="btn primary" onclick="renderHistory()">조회</button>
+            <button class="btn secondary" onclick="resetHistory()">초기화</button>
+            <button class="btn csv" onclick="exportHistoryCSV()">⬇ CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <h3>입출고 이력</h3>
+            <span class="chip" id="historyCntChip">0건</span>
+          </div>
+          <div class="card-bd" style="padding:0 18px 10px">
+            <table><thead><tr><th>일시</th><th>구분</th><th>품목코드</th><th>품목명</th><th class="right">수량</th><th>창고</th><th>현장명</th><th>담당자</th><th>비고</th></tr></thead>
+            <tbody id="historyTbody"></tbody></table>
+          </div>
+          <div id="historyPager" style="padding:12px 18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line)"></div>
+        </div>
+      </section>
+
+      <!-- ══ 재고 조회 ══ -->
+      <section class="page" id="page-stock">
+        <div class="toolbar">
+          <div><label class="small muted">검색</label><input id="stockKeyword" placeholder="품목코드·품목명"></div>
+          <div><label class="small muted">상태 필터</label>
+            <select id="stockStatusFilter">
+              <option value="">전체</option>
+              <option value="ok">정상만</option>
+              <option value="low">부족/긴급만</option>
+            </select>
+          </div>
+          <div class="fit btns">
+            <button class="btn primary" onclick="renderStock()">조회</button>
+            <button class="btn secondary" onclick="resetStockFilter()">초기화</button>
+            <button class="btn csv" onclick="exportStockCSV()">⬇ CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <h3>재고 조회</h3>
+            <span class="chip" id="stockCntChip">0품목</span>
+          </div>
+          <div class="card-bd" style="padding:0 18px 10px">
+            <table><thead id="stockThead"><tr><th>품목코드</th><th>품목명</th><th>규격</th><th>단위</th><th class="right">전체현재고</th><th class="right" id="stockWhCol0">창고1</th><th class="right" id="stockWhCol1">창고2</th><th class="right">안전재고</th><th>상태</th></tr></thead>
+            <tbody id="stockTbody"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 부족 재고 ══ -->
+      <section class="page" id="page-shortage">
+        <div class="card">
+          <div class="card-hd">
+            <h3>부족 재고 목록</h3>
+            <span class="chip" id="shortageCntChip">0종</span>
+          </div>
+          <div class="card-bd" style="padding:0 18px 10px">
+            <table><thead><tr><th>품목코드</th><th>품목명</th><th class="right">현재고</th><th class="right">안전재고</th><th class="right">부족수량</th><th>긴급도</th></tr></thead>
+            <tbody id="shortageTbody"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 품목 마스터 ══ -->
+      <section class="page" id="page-master">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd"><h3>품목 등록 / 수정</h3></div>
+            <div class="card-bd">
+              <input type="hidden" id="mIndex">
+              <div class="row">
+                <div><label class="small muted">품목코드</label><input id="mCode"></div>
+                <div><label class="small muted">품목명</label><input id="mName"></div>
+              </div>
+              <div style="height:12px"></div>
+              <div class="row-3">
+                <div><label class="small muted">규격</label><input id="mSpec"></div>
+                <div><label class="small muted">단위</label><input id="mUnit" value="EA"></div>
+                <div><label class="small muted">안전재고</label><input id="mSafety" type="number" value="0"></div>
+              </div>
+              <div style="height:16px"></div>
+              <div class="btns">
+                <button class="btn primary" onclick="saveMaster()">저장</button>
+                <button class="btn danger" onclick="resetMasterForm()">초기화</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hd">
+              <h3>품목 목록</h3>
+              <span class="chip" id="masterCntChip">0품목</span>
+            </div>
+            <div class="card-bd" style="padding:0 18px 10px">
+              <table><thead><tr><th>품목코드</th><th>품목명</th><th>규격</th><th>단위</th><th class="right">안전재고</th><th>관리</th></tr></thead>
+              <tbody id="masterTbody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 통계 / 리포트 ══ -->
+      <section class="page" id="page-stats">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd"><h3>창고별 재고 비율</h3></div>
+            <div class="card-bd"><canvas id="warehouseChart" height="180"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><h3>출고 TOP 품목 (전체)</h3></div>
+            <div class="card-bd"><canvas id="topChart" height="180"></canvas></div>
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="card stats-table-wrap">
+          <div class="card-hd"><h3>월별 입출고 상세 현황</h3></div>
+          <div class="card-bd" style="padding:0 18px 10px">
+            <table><thead><tr><th>월</th><th class="right">입고건수</th><th class="right">입고수량</th><th class="right">출고건수</th><th class="right">출고수량</th><th class="right">순증감</th></tr></thead>
+            <tbody id="monthlyStatsTbody"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ 시스템 설정 ══ -->
+      <section class="page" id="page-settings">
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-hd"><h3>브랜드 / 기본설정</h3></div>
+            <div class="card-bd setting-box">
+              <div><label class="small muted">회사명 (상단·사이드바 표시)</label><input id="setCompany"></div>
+              <div><label class="small muted">로고 문자 (2~3자)</label><input id="setLogo"></div>
+              <div><label class="small muted">기본 담당자</label><input id="setDefaultManager"></div>
+              <div><label class="small muted">기본 창고</label>
+                <select id="setDefaultWarehouse"></select>
+              </div>
+              <div><label class="small muted">페이지당 표시 건수</label>
+                <select id="setPageSize"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+              </div>
+              <div class="btns">
+                <button class="btn primary" onclick="saveSettings()">설정 저장</button>
+                <button class="btn secondary" onclick="applySettingsToForm()">기본값 반영</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><h3>Apps Script 연동</h3></div>
+            <div class="card-bd setting-box">
+              <div><label class="small muted">Apps Script URL</label><input id="setGasUrl"></div>
+              <div><label class="small muted">시트 저장 연동 사용</label>
+                <select id="setUseGasSave"><option value="Y">사용 (Google Sheets 저장)</option><option value="N">로컬만 사용</option></select>
+              </div>
+              <div class="btns">
+                <button class="btn primary" onclick="testGas()">연결 테스트</button>
+                <button class="btn dark" onclick="refreshAll()">전체 새로고침</button>
+              </div>
+              <div class="chip-row">
+                <div class="chip" id="connState">연결 상태 미확인</div>
+                <div class="chip" id="saveModeState">저장 방식 로컬</div>
+              </div>
+              <div style="margin-top:12px;padding:12px;background:#f8fbff;border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7;border:1px solid var(--line)">
+                <strong style="color:var(--text)">Apps Script action명 (변경 금지)</strong><br>
+                저장: <code id="actionSaveTx"></code><br>
+                품목: <code id="actionSaveMaster"></code><br>
+                조회: <code id="actionDashboard"></code> / 테스트: <code id="actionTest"></code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="card">
+          <div class="card-hd">
+            <h3>배포 정보 / 계정 관리</h3>
+            <span class="chip" id="clientPrefixChip" style="font-family:monospace;font-size:11px"></span>
+          </div>
+          <div class="card-bd">
+            <div class="settings-grid" style="gap:16px">
+              <div>
+                <p class="small muted" style="margin:0 0 10px;font-weight:800">현재 CONFIG 값</p>
+                <div style="background:#f8fbff;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:12px;line-height:2;font-family:monospace" id="configSummary"></div>
+              </div>
+              <div>
+                <p class="small muted" style="margin:0 0 10px;font-weight:800">로그인 계정 목록 <span style="font-weight:400;font-family:sans-serif">(소스 내 CONFIG.USERS 수정)</span></p>
+                <div id="userListWrap"></div>
+                <div style="margin-top:14px;padding:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;font-size:12px;color:#92400e;line-height:1.7">
+                  ⚠ 비밀번호는 납품 후 즉시 변경하세요.<br>
+                  보안 강화 시 Apps Script 서버 인증으로 전환 가능합니다.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="height:16px"></div>
+        <div class="card">
+          <div class="card-hd"><h3>고객사 배포 체크리스트</h3></div>
+          <div class="card-bd">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px" id="deployChecklist"></div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /wrap -->
+  </main>
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ╔══════════════════════════════════════════════════════════════════╗
+   ║  고객사별 배포 설정 블록 — 납품 시 이 블록만 수정하면 됩니다    ║
+   ║                                                                  ║
+   ║  [배포 체크리스트]                                               ║
+   ║  □ 1. CLIENT_ID    — 영문+숫자, 고객사 식별 prefix (충돌방지)   ║
+   ║         예) 'ky', 'acme', 'dongkwang', 'samil'                  ║
+   ║  □ 2. COMPANY      — 시스템에 표시될 고객사 정식 명칭           ║
+   ║  □ 3. LOGO_TEXT    — 사이드바·로그인 로고 문자 (2~3자)          ║
+   ║  □ 4. GAS_URL      — 고객사 전용 Apps Script 배포 URL           ║
+   ║  □ 5. WAREHOUSES   — 창고명 목록 (첫 번째가 기본 창고)          ║
+   ║  □ 6. USERS        — 로그인 계정 (배포 후 비밀번호 교체 필수)   ║
+   ║  □ 7. DEFAULT_THEME — 기본 테마 ('blue' | 'green' | 'dark')     ║
+   ║  □ 8. SEED_ITEMS   — 초기 샘플 품목 (납품용 품목으로 교체)      ║
+   ║  □ 9. HTML <title> 태그 — 브라우저 탭 제목 변경                 ║
+   ║  □ 10. 이 파일을 고객사 전용 파일명으로 저장 후 납품            ║
+   ╚══════════════════════════════════════════════════════════════════╝ */
+
+const CONFIG = {
+  /* ── 1. 고객사 식별자 (localStorage 키 prefix — 고객사마다 반드시 다르게) ── */
+  CLIENT_ID:     'ky',
+
+  /* ── 2. 회사명 / 로고 ── */
+  COMPANY:       'KY 재고관리 시스템',
+  LOGO_TEXT:     'KY',
+
+  /* ── 3. Apps Script URL (고객사 전용 시트의 배포 URL) ── */
+  GAS_URL:       'https://script.google.com/macros/s/AKfycby7stu9vatQDhfoQZMB24QyuPw5TuCHaL-U63txFjUGYa38-DHoFT--DW_45IZBzfUE/exec',
+
+  /* ── 4. 창고 목록 (첫 번째 = 기본 창고) ── */
+  WAREHOUSES:    ['성서공장', '현풍공장'],
+
+  /* ── 5. 로그인 계정 (비밀번호는 납품 후 즉시 교체하세요) ──
+     ※ 보안 강화가 필요한 경우 Apps Script 서버 인증으로 전환 가능  */
+  USERS: [
+    { id: 'admin', pw: 'ky1234', name: '관리자',  role: 'admin' },
+    { id: 'user1', pw: 'ky0000', name: '담당자1', role: 'user'  },
+  ],
+
+  /* ── 6. 기본 테마 ('blue' | 'green' | 'dark') ── */
+  DEFAULT_THEME: 'blue',
+
+  /* ── 7. 초기 샘플 품목 (납품 시 고객사 실품목으로 교체 또는 빈 배열 []) ── */
+  SEED_ITEMS: [
+    { code: 'ITEM-001', name: '콤프레샤 필터', spec: 'A형',    unit: 'EA',  safety: 10 },
+    { code: 'ITEM-002', name: '에어호스',       spec: '10M',   unit: 'EA',  safety: 8  },
+    { code: 'ITEM-003', name: '압력게이지',     spec: '100psi', unit: 'EA', safety: 5  },
+    { code: 'ITEM-004', name: '밸브세트',       spec: '표준',  unit: 'SET', safety: 4  },
+  ],
+
+  /* ── 8. Apps Script action명 (변경 금지 — 기존 시트 호환) ── */
+  ACTION: {
+    SAVE_TX:     'saveTransactionGet',
+    SAVE_MASTER: 'saveMasterItemGet',
+    DASHBOARD:   'dashboard',
+    TEST:        'test',
+  },
+};
+
+/* ════════════════════════════════════════════════════
+   localStorage 키 — CLIENT_ID prefix로 고객사별 분리
+   (같은 브라우저에 복수 고객사 배포해도 충돌 없음)
+   ════════════════════════════════════════════════════ */
+const _PFX        = `inv_${CONFIG.CLIENT_ID}_`;
+const KEY_SETTINGS = _PFX + 'settings';
+const KEY_MASTER   = _PFX + 'master';
+const KEY_TX       = _PFX + 'tx';
+const KEY_THEME    = _PFX + 'theme';
+
+/* ── 하위 호환 별칭 (함수 내부에서 CONFIG.* 직접 사용) ── */
+const DEFAULT_GAS_URL = CONFIG.GAS_URL;
+const DEFAULT_COMPANY = CONFIG.COMPANY;
+const DEFAULT_LOGO    = CONFIG.LOGO_TEXT;
+const LOGIN_USERS     = CONFIG.USERS;
+
+let monthChart, warehouseChart, topChart;
+
+/* ════════════════════════════════════════════════════
+   유틸리티
+   ════════════════════════════════════════════════════ */
+const fmt     = n => Number(n || 0).toLocaleString('ko-KR');
+const nowText = ()  => new Date().toLocaleString('ko-KR');
+const isoDate = v   => String(v || '').slice(0, 10);
+
+const showToast = msg => {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.__toast);
+  window.__toast = setTimeout(() => t.classList.remove('show'), 2000);
+};
+
+/* ════════════════════════════════════════════════════
+   localStorage 헬퍼 (v1 원본 구조 완전 유지)
+   ════════════════════════════════════════════════════ */
+const getSettings = () => JSON.parse(localStorage.getItem(KEY_SETTINGS) || 'null') || {
+  company:          CONFIG.COMPANY,
+  logo:             CONFIG.LOGO_TEXT,
+  gasUrl:           CONFIG.GAS_URL,
+  defaultManager:   CONFIG.USERS[0]?.name || '관리자',
+  defaultWarehouse: CONFIG.WAREHOUSES[0]  || '성서공장',
+  pageSize:         '20',
+  useGasSave:       'N',
+};
+const setSettings = v => localStorage.setItem(KEY_SETTINGS, JSON.stringify(v));
+const getMaster   = () => JSON.parse(localStorage.getItem(KEY_MASTER) || '[]');
+const setMaster   = v => localStorage.setItem(KEY_MASTER, JSON.stringify(v));
+const getTx       = () => JSON.parse(localStorage.getItem(KEY_TX) || '[]');
+const setTx       = v => localStorage.setItem(KEY_TX, JSON.stringify(v));
+
+/* ════════════════════════════════════════════════════
+   샘플 데이터 (첫 실행 시 시드 — CONFIG.SEED_ITEMS 참조)
+   ════════════════════════════════════════════════════ */
+function seed() {
+  if (!getMaster().length && CONFIG.SEED_ITEMS.length) {
+    setMaster(CONFIG.SEED_ITEMS.map(i => ({ ...i })));
+  }
+  if (!getTx().length && CONFIG.SEED_ITEMS.length) {
+    const now = new Date();
+    const wh0 = CONFIG.WAREHOUSES[0] || '성서공장';
+    const wh1 = CONFIG.WAREHOUSES[1] || CONFIG.WAREHOUSES[0] || '성서공장';
+    setTx([
+      { date: new Date(now - 3600000*3).toISOString(), type: '입고', code: CONFIG.SEED_ITEMS[0].code, name: CONFIG.SEED_ITEMS[0].name, qty: 20, manager: CONFIG.USERS[0]?.name||'관리자', warehouse: wh0, site: '본사', note: '' },
+      { date: new Date(now - 3600000*2).toISOString(), type: '출고', code: CONFIG.SEED_ITEMS[1]?.code||CONFIG.SEED_ITEMS[0].code, name: CONFIG.SEED_ITEMS[1]?.name||CONFIG.SEED_ITEMS[0].name, qty: 3,  manager: CONFIG.USERS[0]?.name||'관리자', warehouse: wh1, site: 'A현장', note: '' },
+      { date: new Date(now - 3600000*1).toISOString(), type: '출고', code: CONFIG.SEED_ITEMS[0].code, name: CONFIG.SEED_ITEMS[0].name, qty: 5,  manager: CONFIG.USERS[0]?.name||'관리자', warehouse: wh0, site: 'B현장', note: '' },
+    ]);
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   브랜드 적용
+   ════════════════════════════════════════════════════ */
+function applyBrand() {
+  const s = getSettings();
+  document.getElementById('companyNameSide').textContent = s.company;
+  document.getElementById('brandLogo').textContent = (s.logo || CONFIG.LOGO_TEXT).slice(0, 3);
+  document.getElementById('companyChip').textContent = s.company;
+  document.getElementById('loginLogo').textContent = (s.logo || CONFIG.LOGO_TEXT).slice(0, 3);
+  document.getElementById('loginTitle').textContent = s.company;
+  document.getElementById('setCompany').value = s.company;
+  document.getElementById('setLogo').value = s.logo;
+  document.getElementById('setGasUrl').value = s.gasUrl;
+  document.getElementById('setDefaultManager').value = s.defaultManager || '';
+  document.getElementById('setDefaultWarehouse').value = s.defaultWarehouse || CONFIG.WAREHOUSES[0];
+  document.getElementById('setPageSize').value = s.pageSize || '20';
+  document.getElementById('setUseGasSave').value = s.useGasSave || 'N';
+  document.getElementById('saveModeState').textContent = s.useGasSave === 'Y' ? '저장 방식 GET-Apps Script' : '저장 방식 로컬';
+  // 브라우저 탭 제목
+  document.title = s.company + ' — 재고·물류관리';
+  // action명 표시
+  const fill = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  fill('actionSaveTx',     CONFIG.ACTION.SAVE_TX);
+  fill('actionSaveMaster', CONFIG.ACTION.SAVE_MASTER);
+  fill('actionDashboard',  CONFIG.ACTION.DASHBOARD);
+  fill('actionTest',       CONFIG.ACTION.TEST);
+  // 로그인 힌트 — 계정 ID만 노출 (비밀번호 숨김)
+  const hintEl = document.getElementById('loginHint');
+  if (hintEl && CONFIG.USERS.length) {
+    hintEl.textContent = '계정 ID: ' + CONFIG.USERS.map(u => u.id).join(' / ');
+  }
+  // 계정 목록 렌더 (비밀번호 마스킹)
+  const w = document.getElementById('userListWrap');
+  if (w) w.innerHTML = CONFIG.USERS.map(u =>
+    `<div class="chip-row" style="margin-bottom:8px">
+       <span class="chip">${u.id}</span>
+       <span class="chip" style="letter-spacing:.08em">${'●'.repeat(Math.min(u.pw.length, 8))}</span>
+       <span class="chip">${u.name}</span>
+       <span class="chip" style="background:${u.role==='admin'?'#dbeafe':'#f1f5f9'};color:${u.role==='admin'?'#1d4ed8':'#64748b'}">${u.role||'user'}</span>
+     </div>`
+  ).join('');
+  // localStorage prefix 표시
+  const pfxEl = document.getElementById('clientPrefixChip');
+  if (pfxEl) pfxEl.textContent = 'prefix: ' + _PFX;
+}
+
+function applySettingsToForm(silent) {
+  const s = getSettings();
+  document.getElementById('txManager').value = s.defaultManager || '';
+  document.getElementById('txWarehouse').value = s.defaultWarehouse || CONFIG.WAREHOUSES[0] || '';
+  if (!silent) showToast('기본값 반영 완료');
+}
+
+/* ════════════════════════════════════════════════════
+   페이지 라우팅
+   ════════════════════════════════════════════════════ */
+function goPage(page) {
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const map = {
+    dashboard: ['스마트공장 > 제조업 재고·물류관리', '대시보드', '제조업 스마트공장형 재고·물류 운영 현황'],
+    register:  ['운영 > 현장 입출고 처리', '입출고 등록', '입고 / 출고 실무 처리'],
+    history:   ['운영 > 전체 이력 조회', '입출고 이력', '전체 트랜잭션 조회'],
+    stock:     ['운영 > 재고 현황 관리', '재고 조회', '현재고 및 창고별 수량'],
+    shortage:  ['운영 > 부족 재고 대응', '부족 재고', '안전재고 이하 품목 관리'],
+    master:    ['기준정보 > 품목 표준화', '품목 마스터', '품목 기본정보 관리'],
+    stats:     ['분석 > 재고/출고 분석', '통계 / 리포트', '창고·출고 분석'],
+    settings:  ['설정 > 시스템 환경', '시스템 설정', '회사명 / 실데이터 / 저장방식 설정'],
+  };
+  document.getElementById('breadcrumbText').textContent = map[page][0];
+  document.getElementById('pageTitle').textContent      = map[page][1];
+  document.getElementById('pageSub').textContent        = map[page][2];
+  if (page === 'history')  renderHistory();
+  if (page === 'stock')    renderStock();
+  if (page === 'shortage') renderShortage();
+  if (page === 'master')   renderMaster();
+  if (page === 'stats')    renderStats();
+  if (page === 'settings') { applyBrand(); renderDeployInfo(); }
+}
+
+/* ════════════════════════════════════════════════════
+   재고 계산 — CONFIG.WAREHOUSES 동적 참조 (마이너스 방지 포함)
+   ════════════════════════════════════════════════════ */
+function buildLocalDashboard() {
+  const master = getMaster(), tx = getTx(), stockMap = {};
+  const WH = CONFIG.WAREHOUSES; // ['성서공장','현풍공장'] 등 고객사별 창고 목록
+
+  master.forEach(m => {
+    stockMap[m.code] = { code: m.code, name: m.name, spec: m.spec, unit: m.unit, safety: Number(m.safety || 0) };
+    WH.forEach(w => { stockMap[m.code][w] = 0; });
+  });
+  tx.forEach(r => {
+    if (!stockMap[r.code]) {
+      stockMap[r.code] = { code: r.code, name: r.name || r.code, spec: '', unit: 'EA', safety: 0 };
+      WH.forEach(w => { stockMap[r.code][w] = 0; });
+    }
+    const qty = Number(r.qty || 0), sign = r.type === '입고' ? 1 : -1;
+    const whKey = WH.includes(r.warehouse) ? r.warehouse : WH[0];
+    stockMap[r.code][whKey] += sign * qty;
+  });
+  const rows = Object.values(stockMap).map(v => {
+    const whVals = {};
+    WH.forEach(w => { whVals[w] = Math.max(0, v[w] || 0); });
+    const total = WH.reduce((s, w) => s + whVals[w], 0);
+    return { ...v, ...whVals, total };
+  });
+  const low     = rows.filter(r => r.total <= r.safety).sort((a, b) => (b.safety - b.total) - (a.safety - a.total));
+  const today   = isoDate(new Date().toISOString());
+  const inToday  = tx.filter(r => isoDate(r.date) === today && r.type === '입고').length;
+  const outToday = tx.filter(r => isoDate(r.date) === today && r.type === '출고').length;
+  const monthlyMap = {};
+  tx.forEach(r => {
+    const m = String(r.date || '').slice(0, 7); if (!m) return;
+    if (!monthlyMap[m]) monthlyMap[m] = { month: m, inQty: 0, outQty: 0, inCnt: 0, outCnt: 0 };
+    if (r.type === '입고') { monthlyMap[m].inQty  += Number(r.qty || 0); monthlyMap[m].inCnt++; }
+    else                   { monthlyMap[m].outQty += Number(r.qty || 0); monthlyMap[m].outCnt++; }
+  });
+  // 창고별 합계
+  const warehouseTotals = {};
+  WH.forEach(w => { warehouseTotals[w] = rows.reduce((s, r) => s + (r[w] || 0), 0); });
+  return {
+    kpi: { totalItems: master.length, lowStockItems: low.length, todayIn: inToday, todayOut: outToday, totalStock: rows.reduce((a, b) => a + b.total, 0) },
+    recentTransactions: [...tx].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8).map(r => ({
+      date: new Date(r.date).toLocaleString('ko-KR'), type: r.type, itemCode: r.code, itemName: r.name, qty: r.qty, warehouse: r.warehouse || '', manager: r.manager || ''
+    })),
+    lowStockList: low.slice(0, 8).map(r => ({ itemCode: r.code, itemName: r.name, currentStock: r.total, safetyStock: r.safety, shortage: Math.max(r.safety - r.total, 0) })),
+    monthlyStats: Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month)).slice(-6),
+    warehouse: warehouseTotals,
+    allStockRows: rows,
+    txRaw: tx,
+  };
+}
+
+/* ════════════════════════════════════════════════════
+   Apps Script GET 연동
+   action명은 CONFIG.ACTION에서 중앙 관리 — 직접 문자열 금지
+   ════════════════════════════════════════════════════ */
+async function fetchDashboard() {
+  const gasUrl = getSettings().gasUrl || CONFIG.GAS_URL;
+  try {
+    const res  = await fetch(gasUrl + '?action=' + CONFIG.ACTION.DASHBOARD);
+    const data = await res.json();
+    if (data && data.success) {
+      document.getElementById('connState').textContent = '연결 상태 정상';
+      return { mode: 'gas', data };
+    }
+  } catch (e) {}
+  document.getElementById('connState').textContent = '연결 실패 / 로컬 사용';
+  return { mode: 'local', data: buildLocalDashboard() };
+}
+
+async function saveByGet(action, obj) {
+  const gasUrl = getSettings().gasUrl || CONFIG.GAS_URL;
+  const qs = new URLSearchParams({ action, ...Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v ?? '')])) });
+  const res  = await fetch(gasUrl + '?' + qs.toString());
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || '저장 실패');
+  return data;
+}
+
+/* ════════════════════════════════════════════════════
+   대시보드 렌더
+   ════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  const payload = await fetchDashboard();
+  const local   = buildLocalDashboard();
+  let d = payload.mode === 'gas' ? {
+    ...payload.data,
+    kpi: {
+      totalItems:    payload.data.kpi?.totalItems    || local.kpi.totalItems,
+      lowStockItems: payload.data.kpi?.lowStockItems || local.kpi.lowStockItems,
+      todayIn:       payload.data.kpi?.todayIn       || local.kpi.todayIn,
+      todayOut:      payload.data.kpi?.todayOut      || local.kpi.todayOut,
+      totalStock:    payload.data.kpi?.totalStock    || local.kpi.totalStock,
+    },
+    warehouse:           payload.data.warehouse || local.warehouse,
+    allStockRows:        local.allStockRows,
+    txRaw:               local.txRaw,
+    recentTransactions:  (payload.data.recentTransactions?.length) ? payload.data.recentTransactions : local.recentTransactions,
+    lowStockList:        (payload.data.lowStockList?.length)        ? payload.data.lowStockList        : local.lowStockList,
+    monthlyStats:        (payload.data.monthlyStats?.length)        ? payload.data.monthlyStats        : local.monthlyStats,
+  } : local;
+
+  document.getElementById('kpiItems').textContent      = fmt(d.kpi.totalItems);
+  document.getElementById('kpiTotalStock').textContent = fmt(d.kpi.totalStock);
+  document.getElementById('kpiLow').textContent        = fmt(d.kpi.lowStockItems);
+  document.getElementById('kpiInToday').textContent    = fmt(d.kpi.todayIn);
+  document.getElementById('kpiOutToday').textContent   = fmt(d.kpi.todayOut);
+
+  document.getElementById('recentTbody').innerHTML = (d.recentTransactions || []).length
+    ? d.recentTransactions.map(r => `<tr><td>${r.date||''}</td><td>${r.itemCode||''}</td><td>${r.itemName||''}</td><td><span class="badge ${r.type==='입고'?'in':'out'}">${r.type||''}</span></td><td class="right">${fmt(r.qty)}</td><td>${r.warehouse||'-'}</td><td>${r.manager||''}</td></tr>`).join('')
+    : `<tr><td colspan="7" class="empty">데이터 없음</td></tr>`;
+
+  document.getElementById('lowList').innerHTML = (d.lowStockList || []).length
+    ? d.lowStockList.map(r => `<div class="mini"><div><div><strong>${r.itemName}</strong></div><div class="small muted">${r.itemCode}</div></div><div class="right"><div class="badge low">부족 ${fmt(r.shortage)}</div><div class="small muted">현재고 ${fmt(r.currentStock)} / 안전 ${fmt(r.safetyStock)}</div></div></div>`).join('')
+    : `<div class="empty">✅ 부족 재고가 없습니다</div>`;
+
+  // 창고별 재고 바 — CONFIG.WAREHOUSES 기반 동적 생성
+  const WH       = CONFIG.WAREHOUSES;
+  const whTotals = WH.map(w => Number(d.warehouse?.[w] || 0));
+  const whSum    = whTotals.reduce((a, b) => a + b, 0);
+  const barColors = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626'];
+  const whWrap    = document.getElementById('warehouseBarsWrap');
+  if (whWrap) {
+    whWrap.innerHTML = WH.map((w, i) =>
+      `<div class="mini"><div>${w}</div><strong id="wh${i}Val">${fmt(whTotals[i])}</strong></div>
+       <div class="bar"><div id="wh${i}Bar" style="width:${whSum?((whTotals[i]/whSum)*100).toFixed(1):0}%;background:${barColors[i%barColors.length]}"></div></div>
+       ${i < WH.length-1 ? '<div style="height:12px"></div>' : ''}`
+    ).join('') + `<div style="height:16px"></div><div class="mini"><div>전체 합계</div><strong id="whSum">${fmt(whSum)}</strong></div>`;
+  }
+  // 재고 조회 테이블 헤더 창고명 동적 교체
+  WH.forEach((w, i) => {
+    const th = document.getElementById('stockWhCol' + i);
+    if (th) th.textContent = w;
+  });
+
+  const topMap = {};
+  (local.txRaw || []).filter(r => r.type === '출고' && isoDate(r.date) === isoDate(new Date().toISOString()))
+    .forEach(r => { topMap[r.name] = (topMap[r.name] || 0) + Number(r.qty || 0); });
+  const top = Object.entries(topMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  document.getElementById('topOutList').innerHTML = top.length
+    ? top.map(([n, q], i) => `<div class="mini"><div>${i + 1}. ${n}</div><strong>${fmt(q)}</strong></div>`).join('')
+    : `<div class="empty">오늘 출고 데이터 없음</div>`;
+
+  drawMonthChart(d.monthlyStats || []);
+  document.getElementById('regInCnt').textContent  = fmt(local.kpi.todayIn);
+  document.getElementById('regOutCnt').textContent = fmt(local.kpi.todayOut);
+  renderRegisterRecent();
+  updateShortBadge(d.kpi.lowStockItems);
+}
+
+function drawMonthChart(rows) {
+  const labels = rows.map(r => r.month), inData = rows.map(r => r.inQty || 0), outData = rows.map(r => r.outQty || 0);
+  if (monthChart) monthChart.destroy();
+  monthChart = new Chart(document.getElementById('monthChart'), {
+    type: 'bar', data: { labels, datasets: [{ label: '입고', data: inData, backgroundColor: '#60a5fa' }, { label: '출고', data: outData, backgroundColor: '#f59e0b' }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+/* ════════════════════════════════════════════════════
+   입출고 등록 (v1 원본 saveTransactionGet 완전 유지 + 마이너스 방지)
+   ════════════════════════════════════════════════════ */
+function fillNow() {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  document.getElementById('txDate').value = d.toISOString().slice(0, 16);
+}
+
+function renderRegisterRecent() {
+  const rows = [...getTx()].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+  document.getElementById('regRecent').innerHTML = rows.length
+    ? rows.map(r => `<div class="mini"><div><div><strong>${r.name}</strong></div><div class="small muted">${new Date(r.date).toLocaleString('ko-KR')} · ${r.manager||''}</div></div><div class="right"><div class="badge ${r.type==='입고'?'in':'out'}">${r.type}</div><div class="small muted">${fmt(r.qty)} / ${r.warehouse||''}</div></div></div>`).join('')
+    : `<div class="empty">등록 내역 없음</div>`;
+}
+
+async function saveTransaction() {
+  const row = {
+    date:      document.getElementById('txDate').value ? new Date(document.getElementById('txDate').value).toISOString() : new Date().toISOString(),
+    type:      document.getElementById('txType').value,
+    code:      document.getElementById('txCode').value.trim(),
+    name:      document.getElementById('txName').value.trim(),
+    qty:       Number(document.getElementById('txQty').value || 0),
+    manager:   document.getElementById('txManager').value.trim(),
+    warehouse: document.getElementById('txWarehouse').value,
+    site:      document.getElementById('txSite').value.trim(),
+    note:      document.getElementById('txNote').value.trim(),
+  };
+  if (!row.code || !row.name || !row.qty) { showToast('품목코드, 품목명, 수량 입력'); return; }
+
+  // ★ 마이너스 재고 방지 — 출고 시 창고별 현재고 초과 검사
+  if (row.type === '출고') {
+    const local = buildLocalDashboard();
+    const item  = local.allStockRows.find(r => r.code === row.code);
+    if (item) {
+      const whStock = item[row.warehouse] ?? 0;
+      if (row.qty > whStock) {
+        showAlert('⚠️ 출고 수량 초과 — 저장 차단',
+          `[${row.name}] ${row.warehouse} 현재고: <strong>${fmt(whStock)}${item.unit||''}</strong><br>출고 요청: <strong style="color:#dc2626">${fmt(row.qty)}${item.unit||''}</strong><br><br>현재고보다 많은 수량은 출고할 수 없습니다.<br>수량을 확인 후 다시 입력해주세요.`);
+        return;
+      }
+    }
+  }
+
+  const s = getSettings();
+  if (s.useGasSave === 'Y') {
+    try {
+      await saveByGet(CONFIG.ACTION.SAVE_TX, row); // CONFIG.ACTION.SAVE_TX = 'saveTransactionGet'
+      const arr = getTx(); arr.push(row); setTx(arr);
+      resetTransactionForm(false);
+      await refreshAll();
+      showToast('구글시트 저장 완료');
+      return;
+    } catch (e) { console.error(e); showToast('Apps Script 저장 실패'); return; }
+  }
+  const arr = getTx(); arr.push(row); setTx(arr);
+  resetTransactionForm(false);
+  await refreshAll();
+  showToast('로컬 저장 완료');
+}
+
+function resetTransactionForm(withNow = true) {
+  document.getElementById('txType').value = '입고';
+  document.getElementById('txCode').value = '';
+  document.getElementById('txName').value = '';
+  document.getElementById('txQty').value  = 1;
+  document.getElementById('txSite').value = '';
+  document.getElementById('txNote').value = '';
+  applySettingsToForm(true);
+  if (withNow) fillNow();
+  hideStockPreview();
+  closeAcList();
+}
+
+/* ════════════════════════════════════════════════════
+   입출고 이력 (v1 원본 + 날짜필터·페이징·건수 추가)
+   ════════════════════════════════════════════════════ */
+let _histPage = 1;
+function renderHistory() {
+  const kw = document.getElementById('historyKeyword').value.trim();
+  const tp = document.getElementById('historyType').value;
+  const wh = document.getElementById('historyWh').value;
+  const df = document.getElementById('historyDateFrom').value;
+  const dt = document.getElementById('historyDateTo').value;
+  let rows = [...getTx()].sort((a, b) => new Date(b.date) - new Date(a.date));
+  rows = rows.filter(r => {
+    const d = isoDate(r.date);
+    return (!kw || [r.code, r.name, r.manager].join(' ').includes(kw))
+      && (!tp || r.type === tp)
+      && (!wh || r.warehouse === wh)
+      && (!df || d >= df)
+      && (!dt || d <= dt);
+  });
+  const cnt = document.getElementById('historyCntChip');
+  if (cnt) cnt.textContent = rows.length + '건';
+  const ps        = Number(getSettings().pageSize || 20);
+  const totalPage = Math.ceil(rows.length / ps) || 1;
+  if (_histPage > totalPage) _histPage = totalPage;
+  const paged = rows.slice((_histPage - 1) * ps, _histPage * ps);
+  document.getElementById('historyTbody').innerHTML = paged.length
+    ? paged.map(r => `<tr><td>${new Date(r.date).toLocaleString('ko-KR')}</td><td><span class="badge ${r.type==='입고'?'in':'out'}">${r.type}</span></td><td>${r.code}</td><td>${r.name}</td><td class="right">${fmt(r.qty)}</td><td>${r.warehouse||''}</td><td>${r.site||''}</td><td>${r.manager||''}</td><td>${r.note||''}</td></tr>`).join('')
+    : `<tr><td colspan="9" class="empty">데이터 없음</td></tr>`;
+  const pager = document.getElementById('historyPager');
+  if (pager && rows.length > ps) {
+    let h = `<span class="small muted">총 ${rows.length}건</span>`;
+    if (_histPage > 1)          h += `<button class="btn secondary" style="padding:6px 12px;font-size:12px" onclick="_histPage--;renderHistory()">◀</button>`;
+    for (let p = Math.max(1, _histPage-2); p <= Math.min(totalPage, _histPage+2); p++)
+      h += `<button class="btn ${p===_histPage?'primary':'secondary'}" style="padding:6px 12px;font-size:12px" onclick="_histPage=${p};renderHistory()">${p}</button>`;
+    if (_histPage < totalPage)  h += `<button class="btn secondary" style="padding:6px 12px;font-size:12px" onclick="_histPage++;renderHistory()">▶</button>`;
+    pager.innerHTML = h;
+  } else if (pager) pager.innerHTML = '';
+  window._lastHistoryRows = rows;
+}
+
+function resetHistory() {
+  document.getElementById('historyKeyword').value  = '';
+  document.getElementById('historyType').value     = '';
+  document.getElementById('historyWh').value       = '';
+  document.getElementById('historyDateFrom').value = '';
+  document.getElementById('historyDateTo').value   = '';
+  _histPage = 1;
+  renderHistory();
+}
+
+/* ════════════════════════════════════════════════════
+   재고 조회 (v1 원본 + 상태필터·건수·행강조 추가)
+   ════════════════════════════════════════════════════ */
+function stockRows() { return buildLocalDashboard().allStockRows || []; }
+
+function renderStock() {
+  const kw = document.getElementById('stockKeyword').value.trim();
+  const sf = document.getElementById('stockStatusFilter')?.value || '';
+  let rows = stockRows();
+  rows = rows.filter(r => {
+    const isLow   = r.total <= r.safety;
+    const nameOk  = !kw || [r.code, r.name].join(' ').includes(kw);
+    const statusOk = sf === '' || (sf === 'ok' && !isLow) || (sf === 'low' && isLow);
+    return nameOk && statusOk;
+  });
+  const cnt = document.getElementById('stockCntChip'); if (cnt) cnt.textContent = rows.length + '품목';
+  const WH = CONFIG.WAREHOUSES;
+  document.getElementById('stockTbody').innerHTML = rows.length
+    ? rows.map(r => {
+        const isLow   = r.total <= r.safety;
+        const isDanger= isLow && (r.safety - r.total) >= 5;
+        const trCls   = isDanger ? 'row-danger' : isLow ? 'row-low' : '';
+        const badge   = isLow ? `<span class="badge low">부족</span>` : `<span class="badge ok">정상</span>`;
+        const whCols  = WH.map(w => `<td class="right">${fmt(r[w] || 0)}</td>`).join('');
+        return `<tr class="${trCls}"><td>${r.code}</td><td>${r.name}</td><td>${r.spec||''}</td><td>${r.unit||''}</td><td class="right"><strong>${fmt(r.total)}</strong></td>${whCols}<td class="right">${fmt(r.safety)}</td><td>${badge}</td></tr>`;
+      }).join('')
+    : `<tr><td colspan="${5 + WH.length + 2}" class="empty">데이터 없음</td></tr>`;
+  window._lastStockRows = rows;
+}
+
+function resetStockFilter() {
+  document.getElementById('stockKeyword').value = '';
+  const f = document.getElementById('stockStatusFilter'); if (f) f.value = '';
+  renderStock();
+}
+
+/* ════════════════════════════════════════════════════
+   부족 재고 (v1 원본 + 건수·행강조 추가)
+   ════════════════════════════════════════════════════ */
+function renderShortage() {
+  const rows = stockRows().filter(r => r.total <= r.safety).sort((a, b) => (b.safety - b.total) - (a.safety - a.total));
+  updateShortBadge(rows.length);
+  const cnt = document.getElementById('shortageCntChip'); if (cnt) cnt.textContent = rows.length + '종';
+  document.getElementById('shortageTbody').innerHTML = rows.length
+    ? rows.map(r => {
+        const lack   = Math.max(r.safety - r.total, 0);
+        const urgent = lack >= 5;
+        return `<tr class="${urgent?'row-danger':'row-low'}"><td>${r.code}</td><td>${r.name}</td><td class="right" style="font-weight:800;color:#dc2626">${fmt(r.total)}</td><td class="right">${fmt(r.safety)}</td><td class="right" style="font-weight:800;color:#d97706">${fmt(lack)}</td><td>${urgent?'<span class="badge out">🔴 긴급</span>':'<span class="badge warn">🟡 주의</span>'}</td></tr>`;
+      }).join('')
+    : `<tr><td colspan="6" class="empty">✅ 부족 재고 없음</td></tr>`;
+}
+
+/* ════════════════════════════════════════════════════
+   품목 마스터 (v1 원본 saveMasterItemGet 완전 유지)
+   ════════════════════════════════════════════════════ */
+async function saveMaster() {
+  const idx = document.getElementById('mIndex').value;
+  const row = {
+    code:   document.getElementById('mCode').value.trim(),
+    name:   document.getElementById('mName').value.trim(),
+    spec:   document.getElementById('mSpec').value.trim(),
+    unit:   document.getElementById('mUnit').value.trim(),
+    safety: Number(document.getElementById('mSafety').value || 0),
+  };
+  if (!row.code || !row.name) { showToast('품목코드와 품목명 입력'); return; }
+  const s = getSettings();
+  if (s.useGasSave === 'Y') {
+    try { await saveByGet(CONFIG.ACTION.SAVE_MASTER, row); } // CONFIG.ACTION.SAVE_MASTER = 'saveMasterItemGet'
+    catch (e) { console.error(e); showToast('Apps Script 품목 저장 실패'); return; }
+  }
+  const arr = getMaster();
+  if (idx === '') arr.push(row); else arr[Number(idx)] = row;
+  setMaster(arr);
+  resetMasterForm();
+  await refreshAll();
+  showToast(s.useGasSave === 'Y' ? '품목 저장 완료' : '로컬 품목 저장 완료');
+}
+
+function editMaster(i) {
+  const r = getMaster()[i];
+  document.getElementById('mIndex').value  = i;
+  document.getElementById('mCode').value   = r.code;
+  document.getElementById('mName').value   = r.name;
+  document.getElementById('mSpec').value   = r.spec  || '';
+  document.getElementById('mUnit').value   = r.unit  || 'EA';
+  document.getElementById('mSafety').value = r.safety || 0;
+}
+
+function delMaster(i) {
+  const arr = getMaster(); arr.splice(i, 1); setMaster(arr);
+  refreshAll(); showToast('품목 삭제 완료');
+}
+
+function resetMasterForm() {
+  document.getElementById('mIndex').value  = '';
+  document.getElementById('mCode').value   = '';
+  document.getElementById('mName').value   = '';
+  document.getElementById('mSpec').value   = '';
+  document.getElementById('mUnit').value   = 'EA';
+  document.getElementById('mSafety').value = 0;
+}
+
+function renderMaster() {
+  const rows = getMaster();
+  const cnt = document.getElementById('masterCntChip'); if (cnt) cnt.textContent = rows.length + '품목';
+  document.getElementById('masterTbody').innerHTML = rows.length
+    ? rows.map((r, i) => `<tr><td>${r.code}</td><td>${r.name}</td><td>${r.spec||''}</td><td>${r.unit||''}</td><td class="right">${fmt(r.safety)}</td><td><div class="btns"><button class="btn secondary" onclick="editMaster(${i})">수정</button><button class="btn danger" onclick="delMaster(${i})">삭제</button></div></td></tr>`).join('')
+    : `<tr><td colspan="6" class="empty">품목 없음</td></tr>`;
+}
+
+/* ════════════════════════════════════════════════════
+   통계 (v1 원본 + 월별 상세 테이블 추가)
+   ════════════════════════════════════════════════════ */
+function renderStats() {
+  const loc = buildLocalDashboard();
+  const WH  = CONFIG.WAREHOUSES;
+  const barColors = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626'];
+  if (warehouseChart) warehouseChart.destroy();
+  warehouseChart = new Chart(document.getElementById('warehouseChart'), {
+    type: 'doughnut',
+    data: {
+      labels: WH,
+      datasets: [{ data: WH.map(w => loc.warehouse[w] || 0), backgroundColor: WH.map((_, i) => barColors[i % barColors.length]) }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+  const topMap = {};
+  loc.txRaw.filter(r => r.type === '출고').forEach(r => { topMap[r.name] = (topMap[r.name] || 0) + Number(r.qty || 0); });
+  const top = Object.entries(topMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (topChart) topChart.destroy();
+  topChart = new Chart(document.getElementById('topChart'), {
+    type: 'bar',
+    data: { labels: top.map(x => x[0]), datasets: [{ label: '출고수량', data: top.map(x => x[1]), backgroundColor: '#f59e0b' }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+  });
+  // 월별 상세 테이블
+  const tbody = document.getElementById('monthlyStatsTbody');
+  if (tbody) {
+    const stats = Object.values(getTx().reduce((acc, r) => {
+      const m = String(r.date || '').slice(0, 7); if (!m) return acc;
+      if (!acc[m]) acc[m] = { month: m, inCnt: 0, inQty: 0, outCnt: 0, outQty: 0 };
+      if (r.type === '입고') { acc[m].inCnt++;  acc[m].inQty  += Number(r.qty || 0); }
+      else                   { acc[m].outCnt++; acc[m].outQty += Number(r.qty || 0); }
+      return acc;
+    }, {})).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12);
+    tbody.innerHTML = stats.length
+      ? stats.map(s => {
+          const net = s.inQty - s.outQty;
+          return `<tr><td><strong>${s.month}</strong></td><td class="right">${fmt(s.inCnt)}</td><td class="right">${fmt(s.inQty)}</td><td class="right">${fmt(s.outCnt)}</td><td class="right">${fmt(s.outQty)}</td><td class="right" style="font-weight:800;color:${net>=0?'#16a34a':'#dc2626'}">${net>=0?'+':''}${fmt(net)}</td></tr>`;
+        }).join('')
+      : `<tr><td colspan="6" class="empty">데이터 없음</td></tr>`;
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   설정 저장
+   ════════════════════════════════════════════════════ */
+function saveSettings() {
+  const s = {
+    company:          document.getElementById('setCompany').value.trim()         || CONFIG.COMPANY,
+    logo:             document.getElementById('setLogo').value.trim()            || CONFIG.LOGO_TEXT,
+    gasUrl:           document.getElementById('setGasUrl').value.trim()          || CONFIG.GAS_URL,
+    defaultManager:   document.getElementById('setDefaultManager').value.trim()  || CONFIG.USERS[0]?.name || '관리자',
+    defaultWarehouse: document.getElementById('setDefaultWarehouse').value,
+    pageSize:         document.getElementById('setPageSize').value,
+    useGasSave:       document.getElementById('setUseGasSave').value,
+  };
+  setSettings(s);
+  applyBrand();
+  applySettingsToForm(true);
+  showToast('설정 저장 완료');
+}
+
+async function testGas() {
+  const url = document.getElementById('setGasUrl').value.trim() || CONFIG.GAS_URL;
+  try {
+    const res  = await fetch(url + '?action=' + CONFIG.ACTION.TEST);
+    const data = await res.json();
+    if (data.success) { document.getElementById('connState').textContent = '연결 상태 정상'; showToast('Apps Script 연결 정상'); }
+    else              { document.getElementById('connState').textContent = '연결 실패'; showToast('연결 실패'); }
+  } catch (e) { document.getElementById('connState').textContent = '연결 실패'; showToast('연결 실패'); }
+}
+
+/* ════════════════════════════════════════════════════
+   전체 새로고침 (v1 원본 refreshAll 유지)
+   ════════════════════════════════════════════════════ */
+async function refreshAll() {
+  await renderDashboard();
+  renderHistory();
+  renderStock();
+  renderShortage();
+  renderMaster();
+  renderStats();
+}
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 로그인
+   ════════════════════════════════════════════════════ */
+function doLogin() {
+  const id = document.getElementById('loginId').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const u  = CONFIG.USERS.find(x => x.id === id && x.pw === pw);
+  if (!u) { document.getElementById('loginErr').style.display = 'block'; return; }
+  document.getElementById('loginErr').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'flex';
+  document.getElementById('txManager').value = u.name;
+  showToast(u.name + '님 로그인 완료');
+}
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginId').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPw').focus(); });
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 테마 변경
+   ════════════════════════════════════════════════════ */
+function setTheme(t, el) {
+  document.body.className = t === 'blue' ? '' : ('theme-' + t);
+  document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else    document.querySelector('.theme-dot.t-' + t)?.classList.add('active');
+  localStorage.setItem(KEY_THEME, t);
+}
+(() => {
+  const saved = localStorage.getItem(KEY_THEME) || CONFIG.DEFAULT_THEME || 'blue';
+  setTheme(saved, document.querySelector('.theme-dot.t-' + saved));
+})();
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 부족재고 배지
+   ════════════════════════════════════════════════════ */
+function updateShortBadge(cnt) {
+  const b = document.getElementById('shortBadge'); if (!b) return;
+  b.textContent = cnt || 0;
+  b.classList.toggle('on', (cnt || 0) > 0);
+}
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 자동완성
+   ════════════════════════════════════════════════════ */
+function onNameInput(v) {
+  const list = document.getElementById('acList');
+  if (!v || v.length < 1) { list.classList.remove('open'); return; }
+  const items = getMaster().filter(m => m.name.includes(v) || m.code.includes(v)).slice(0, 8);
+  if (!items.length) { list.classList.remove('open'); return; }
+  list.innerHTML = items.map(m =>
+    `<div class="ac-item" onclick="selectAcItem('${m.code.replace(/'/g,"\\'")}','${m.name.replace(/'/g,"\\'")}','${(m.unit||'').replace(/'/g,"\\'")}')"><strong>${m.name}</strong><span>${m.code} ${m.spec||''}</span></div>`
+  ).join('');
+  list.classList.add('open');
+}
+
+function selectAcItem(code, name, unit) {
+  document.getElementById('txCode').value = code;
+  document.getElementById('txName').value = name;
+  closeAcList();
+  showStockPreview(code, unit);
+  onQtyInput();
+}
+
+function closeAcList() { document.getElementById('acList').classList.remove('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('.autocomplete-wrap')) closeAcList(); });
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 현재고 미리보기 + 실시간 초과 경고
+   ════════════════════════════════════════════════════ */
+function getItemStock(code) {
+  if (!code) return null;
+  return buildLocalDashboard().allStockRows.find(r => r.code === code) || null;
+}
+
+function showStockPreview(code, unit) {
+  const item = getItemStock(code);
+  const box  = document.getElementById('stockPreview');
+  if (!item) { if (box) box.style.display = 'none'; return; }
+  const wh      = document.getElementById('txWarehouse').value || CONFIG.WAREHOUSES[0];
+  const whStock = item[wh] ?? 0;
+  document.getElementById('spValue').textContent = fmt(whStock);
+  document.getElementById('spUnit').textContent  = item.unit || unit || '';
+  box.style.display = 'flex';
+  box.className = 'stock-preview';
+}
+
+function hideStockPreview() {
+  const box = document.getElementById('stockPreview'); if (box) box.style.display = 'none';
+}
+
+function onQtyInput() {
+  const code = document.getElementById('txCode').value.trim();
+  const type = document.getElementById('txType').value;
+  const qty  = Number(document.getElementById('txQty').value || 0);
+  const wh   = document.getElementById('txWarehouse').value || CONFIG.WAREHOUSES[0];
+  const item = getItemStock(code);
+  const box  = document.getElementById('stockPreview');
+  const warn = document.getElementById('spWarn');
+  if (!item || !box) return;
+  const whStock = item[wh] ?? 0;
+  document.getElementById('spValue').textContent = fmt(whStock);
+  document.getElementById('spUnit').textContent  = item.unit || '';
+  box.style.display = 'flex';
+  if (type === '출고' && qty > whStock) {
+    box.className = 'stock-preview danger';
+    warn.style.display = 'inline';
+  } else {
+    box.className = 'stock-preview' + (type === '출고' && whStock <= item.safety ? ' warn' : '');
+    warn.style.display = 'none';
+  }
+}
+
+function onTxTypeChange() {
+  hideStockPreview();
+  const code = document.getElementById('txCode').value.trim();
+  if (code) onQtyInput();
+}
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: 마이너스 방지 모달
+   ════════════════════════════════════════════════════ */
+function showAlert(title, msg) {
+  document.getElementById('alertTitle').textContent  = title;
+  document.getElementById('alertMsg').innerHTML       = msg;
+  document.getElementById('alertModal').classList.add('open');
+}
+function closeAlert() { document.getElementById('alertModal').classList.remove('open'); }
+
+/* ════════════════════════════════════════════════════
+   ★ 신규 기능: CSV 내보내기
+   ════════════════════════════════════════════════════ */
+function exportHistoryCSV() {
+  const rows = window._lastHistoryRows || getTx();
+  const hdr  = ['일시', '구분', '품목코드', '품목명', '수량', '창고', '현장명', '담당자', '비고'];
+  const data  = rows.map(r => [new Date(r.date).toLocaleString('ko-KR'), r.type, r.code, r.name, r.qty, r.warehouse||'', r.site||'', r.manager||'', r.note||'']);
+  downloadCSV([hdr, ...data], '입출고이력_' + isoDate(new Date().toISOString()) + '.csv');
+}
+
+function exportStockCSV() {
+  const rows = window._lastStockRows || stockRows();
+  const WH   = CONFIG.WAREHOUSES;
+  const hdr  = ['품목코드', '품목명', '규격', '단위', '전체현재고', ...WH, '안전재고', '상태'];
+  const data  = rows.map(r => [r.code, r.name, r.spec||'', r.unit||'', r.total, ...WH.map(w => r[w]||0), r.safety, r.total <= r.safety ? '부족' : '정상']);
+  downloadCSV([hdr, ...data], '재고현황_' + isoDate(new Date().toISOString()) + '.csv');
+}
+
+function downloadCSV(rows, filename) {
+  const bom = '\uFEFF';
+  const csv = bom + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a   = document.createElement('a');
+  a.href    = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showToast(filename + ' 다운로드 시작');
+}
+
+/* ════════════════════════════════════════════════════
+   동적 UI 초기화 — CONFIG.WAREHOUSES 기반 select 생성
+   ════════════════════════════════════════════════════ */
+function initWarehouseSelects() {
+  const whOpts = CONFIG.WAREHOUSES.map(w => `<option value="${w}">${w}</option>`).join('');
+  // 입출고 등록 창고
+  const txWh = document.getElementById('txWarehouse');
+  if (txWh) txWh.innerHTML = whOpts;
+  // 이력 필터 창고
+  const histWh = document.getElementById('historyWh');
+  if (histWh) histWh.innerHTML = `<option value="">전체</option>` + whOpts;
+  // 설정 기본 창고
+  const setWh = document.getElementById('setDefaultWarehouse');
+  if (setWh) setWh.innerHTML = whOpts;
+}
+
+/* ════════════════════════════════════════════════════
+   배포 정보 렌더 (설정 화면)
+   ════════════════════════════════════════════════════ */
+function renderDeployInfo() {
+  // CONFIG 요약
+  const cfgEl = document.getElementById('configSummary');
+  if (cfgEl) {
+    const s = getSettings();
+    cfgEl.innerHTML = [
+      `CLIENT_ID  : ${CONFIG.CLIENT_ID}`,
+      `COMPANY    : ${s.company}`,
+      `WAREHOUSES : ${CONFIG.WAREHOUSES.join(', ')}`,
+      `GAS 연동   : ${s.useGasSave === 'Y' ? '✅ 사용 중' : '⏸ 로컬 모드'}`,
+      `저장 prefix: ${_PFX}`,
+    ].map(l => `<div>${l}</div>`).join('');
+  }
+  // 배포 체크리스트
+  const clEl = document.getElementById('deployChecklist');
+  if (clEl) {
+    const gasUrl   = getSettings().gasUrl || '';
+    const isDefault = gasUrl === 'https://script.google.com/macros/s/AKfycby7stu9vatQDhfoQZMB24QyuPw5TuCHaL-U63txFjUGYa38-DHoFT--DW_45IZBzfUE/exec';
+    const hasSeed  = CONFIG.SEED_ITEMS.some(i => i.code.startsWith('ITEM-'));
+    const checklist = [
+      { ok: CONFIG.CLIENT_ID !== 'ky',    label: 'CLIENT_ID 변경',        desc: '고객사 고유 prefix 설정' },
+      { ok: CONFIG.COMPANY !== 'KY 재고관리 시스템', label: '회사명 변경', desc: 'CONFIG.COMPANY 설정' },
+      { ok: !isDefault,                   label: 'Apps Script URL 변경',  desc: '고객사 전용 시트 연결' },
+      { ok: getSettings().useGasSave === 'Y', label: 'Google Sheets 연동 활성화', desc: '설정 > Apps Script 연동 사용' },
+      { ok: !hasSeed,                     label: '샘플 품목 교체',         desc: 'CONFIG.SEED_ITEMS 실품목으로 변경' },
+      { ok: !CONFIG.USERS.some(u => u.pw === 'ky1234' || u.pw === 'ky0000'), label: '비밀번호 변경', desc: 'CONFIG.USERS 비밀번호 수정' },
+      { ok: CONFIG.WAREHOUSES.join(',') !== '성서공장,현풍공장', label: '창고명 변경', desc: 'CONFIG.WAREHOUSES 실창고명 적용' },
+      { ok: CONFIG.DEFAULT_THEME !== 'blue', label: '테마 설정',           desc: 'CONFIG.DEFAULT_THEME 지정 (선택)' },
+    ];
+    clEl.innerHTML = checklist.map(c =>
+      `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:${c.ok?'#f0fdf4':'#fff7ed'};border:1px solid ${c.ok?'#bbf7d0':'#fed7aa'}">
+         <span style="font-size:16px;flex-shrink:0">${c.ok ? '✅' : '⬜'}</span>
+         <div><div style="font-weight:700;font-size:13px;color:${c.ok?'#166534':'#92400e'}">${c.label}</div><div style="font-size:11px;color:${c.ok?'#4ade80':'#d97706'};margin-top:2px">${c.desc}</div></div>
+       </div>`
+    ).join('');
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   초기화 (v1 원본 순서 유지 + CONFIG 초기화 추가)
+   ════════════════════════════════════════════════════ */
+document.querySelectorAll('.nav button').forEach(b => b.addEventListener('click', () => goPage(b.dataset.page)));
+document.getElementById('todayText').textContent = nowText();
+initWarehouseSelects();   // ★ CONFIG.WAREHOUSES 기반 select 생성
+seed();
+applyBrand();
+fillNow();
+applySettingsToForm(true);
+resetMasterForm();
+refreshAll(); // 로그인 화면 뒤에서 백그라운드 준비
+</script>
+</body>
+</html>
